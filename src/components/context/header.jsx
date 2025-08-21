@@ -29,9 +29,6 @@ export default function Header() {
           <Link href="#about" className="hover:text-blue-600 font-mono">
             About
           </Link>
-          <Link href="/control" className="hover:text-blue-600 font-mono">
-            Control
-          </Link>
         </nav>
       </div>
 
@@ -44,9 +41,6 @@ export default function Header() {
             </Link>
             <Link href="/about" className="hover:text-blue-600">
               About
-            </Link>
-            <Link href="/contact" className="hover:text-blue-600">
-              Contact
             </Link>
           </div>
         </nav>
