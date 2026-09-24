@@ -1,11 +1,18 @@
-import ParticlesBackground from "@/components/context/particles-bg";
-import Header from "@/components/context/header";
+import WhatIBuild from "@/components/with-3d";
+import App from "../components/App";
+import "../components/index.css";
+import AboutMe from "@/components/with-3d/about-me";
 
 export default function Home() {
   return (
-    <main>
-      <ParticlesBackground />
-      <Header />
-    </main>
+    // <main>
+    //   <ParticlesBackground />
+    //   <Header />
+    // </main>
+    <>
+      <App />
+      <WhatIBuild />
+      <AboutMe />
+    </>
   );
 }
