@@ -1,17 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-/* The room is photographed once, then a wall of the same plaster colour closes
-   over it and the writing continues on bare wall. One red thread is sewn down
-   the whole length; it is the only thing in the section that moves. */
+import { useScrubVideo } from "../use-scrub-video";
 
-const INK = "#2B241E"; // her felted sweater, lifted; 7.0:1 on the darkest wall in the column
-const BODY = "#3A2F25"; // one step off ink, never used where the column reaches the floor
+/* The room is filmed once and then stays put: the film holds the viewport while
+   every beat of the writing scrolls across it. Moving the cursor drags its
+   playhead, the same gesture the hero answers to. */
+
+const INK = "#2B241E"; // her felted sweater, lifted; 7.0:1 worst-case on the photographed wall
 const THREAD = "#9C3025"; // her red socks, darkened until it clears the 3:1 non-text gate
 const SEAM = "#7A2A20"; // the tie-off: underline + focus ring, survives every ground here
-const WALL = "#EFBE89";
 
 const HAND = "var(--font-hand), Georgia, 'Times New Roman', serif";
 const SANS = "var(--font-geist-sans), system-ui, sans-serif";
@@ -24,7 +23,6 @@ const STITCH_X = `repeating-linear-gradient(to right, ${THREAD} 0 9px, transpare
 const SEWN_AT = 0.72;
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-const seg = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 
 /* globals.css declares unlayered `p, div, h1-h6` rules (font-mono, text-white).
    Unlayered CSS beats Tailwind's layered utilities, so every leaf text node sets
@@ -63,7 +61,7 @@ const prose = {
   fontSize: "clamp(14.5px, 1.1vw, 16.5px)",
   lineHeight: 1.6,
   fontWeight: 400,
-  color: BODY,
+  color: INK,
 } as const;
 
 const name = { fontWeight: 600, color: INK } as const;
@@ -120,7 +118,7 @@ const factLabel = {
   fontSize: "clamp(13px, 1vw, 14.5px)",
   lineHeight: 1.5,
   fontWeight: 500,
-  color: BODY,
+  color: INK,
 } as const;
 
 const factValue = {
@@ -132,7 +130,7 @@ const factValue = {
   maxWidth: "42ch",
 } as const;
 
-const EMAIL = "ganboldtergel11@gmail.com";
+const EMAIL = "bayrjargal0508@gmail.com";
 
 function Knot({ on, still }: { on: boolean; still: boolean }) {
   return (
@@ -148,21 +146,38 @@ function Knot({ on, still }: { on: boolean; still: boolean }) {
         background: THREAD,
         transform: `scale(${on ? 1 : 0})`,
         // the small bounce of wool being pressed; the only easing curve in the file
-        transition: still ? "none" : "transform 160ms cubic-bezier(.34,1.56,.64,1)",
+        transition: still
+          ? "none"
+          : "transform 160ms cubic-bezier(.34,1.56,.64,1)",
       }}
     />
   );
 }
 
 export default function AboutMe() {
-  const stageRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const colRef = useRef<HTMLDivElement>(null);
   const beatRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const [wipe, setWipe] = useState(0); // the wall closing over the room
   const [sewn, setSewn] = useState(0); // how far the column thread has run
   const [knots, setKnots] = useState(0); // bitmask, one bit per beat
   const [still, setStill] = useState(false); // prefers-reduced-motion
+  const [near, setNear] = useState(false); // the film is worth decoding
+
+  // a quarter-viewport of warning: the film buffers and takes the cursor just
+  // before it is looked at, and gives both back once it is behind you
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setNear(entry.isIntersecting),
+      { rootMargin: "25%" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const { videoRef, onLoadedMetadata, onSeeked } = useScrubVideo(near);
 
   useEffect(() => {
     // reduced motion lands on the finished composition: room kept, thread fully sewn
@@ -174,15 +189,6 @@ export default function AboutMe() {
     }
 
     const update = () => {
-      const stage = stageRef.current;
-      if (stage) {
-        const { top, height } = stage.getBoundingClientRect();
-        const travel = height - window.innerHeight;
-        // fail open: a stage shorter than the viewport shows everything, not nothing
-        const p = travel <= 0 ? 1 : clamp01(-top / travel);
-        setWipe(seg(p, 0.3, 0.92));
-      }
-
       const col = colRef.current;
       if (!col) return;
       const line = window.innerHeight * SEWN_AT;
@@ -192,7 +198,9 @@ export default function AboutMe() {
       setKnots(
         beatRefs.current.reduce(
           (mask, el, i) =>
-            el && el.getBoundingClientRect().top <= line ? mask | (1 << i) : mask,
+            el && el.getBoundingClientRect().top <= line
+              ? mask | (1 << i)
+              : mask,
           0,
         ),
       );
@@ -214,66 +222,77 @@ export default function AboutMe() {
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby="about-heading"
       className="relative"
-      style={{ background: WALL }}
     >
-      {/* A — the room, and the wall that closes over it */}
-      <div ref={stageRef} className="relative h-[240svh] motion-reduce:h-[100lvh]">
-        {/* lvh, not svh: when mobile browser chrome retracts the small viewport
-              grows and an svh-tall photo would leave a band of bare plaster under it */}
-          <div className="sticky top-0 h-[100lvh] overflow-hidden motion-reduce:static">
-          {/* object-position 12% is hand-tuned to this 1672x941 asset: at phone
-              widths it opens onto lit plaster rather than her face. Recrop the
-              image and this number silently becomes wrong. */}
-          <Image
-            src="/woolen-model-bg.png"
-            alt=""
-            aria-hidden
-            fill
-            sizes="100vw"
-            quality={70}
-            className="object-cover object-[12%_center] md:landscape:object-[50%_center]"
-          />
+      {/* the room stays where it is and the writing travels over it: sticky for
+          the height of the section, pulled back out of the flow by its own
+          height so no beat has to make room for it. */}
+      <div
+        aria-hidden
+        className="sticky top-0 z-0 h-[100lvh] -mb-[100lvh] overflow-hidden"
+      >
+        {/* object-position 12% is hand-tuned to this 1914x1080 footage: at phone
+            widths it keeps the column on lit plaster rather than on her face.
+            Recrop the film and this number silently becomes wrong. The still is
+            the poster, so the frame is never black while the video loads. */}
+        <video
+          ref={videoRef}
+          src="/media/woolen-girl.mp4"
+          poster="/woolen-model-bg.png"
+          muted
+          playsInline
+          preload={near ? "auto" : "metadata"}
+          aria-hidden
+          onLoadedMetadata={onLoadedMetadata}
+          onSeeked={onSeeked}
+          className="absolute inset-0 w-full h-full object-cover object-[12%_center] md:landscape:object-[50%_center] pointer-events-none select-none"
+        />
 
-          {/* not a crossfade: a hard edge, drawn downward at the needle's own rate.
-              The clip is on this flat rectangle, never on the 2MB image. */}
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              background: WALL,
-              clipPath: `inset(0 0 ${(1 - wipe) * 100}% 0)`,
-            }}
-          />
+        {/* light on the floorboards. The photograph's one weak band for ink is
+            the shadowed floor at ~78% of the frame: 4.5:1 at the median, 3.0:1
+            at its darkest. This lifts the band under the writing only — on wide
+            screens a mask ends it before her, so the wool keeps its blacks. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 md:hidden"
+          style={{ background: "linear-gradient(to top, rgba(255,243,222,.72) 0%, rgba(255,243,222,.52) 14%, rgba(255,243,222,0) 36%)" }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 hidden md:block"
+          style={{
+            background: "linear-gradient(to top, rgba(255,243,222,.72) 0%, rgba(255,243,222,.52) 14%, rgba(255,243,222,0) 36%)",
+            maskImage: "linear-gradient(to right, #000 0 46%, transparent 74%)",
+            WebkitMaskImage: "linear-gradient(to right, #000 0 46%, transparent 74%)",
+          }}
+        />
+      </div>
 
-          <div className="absolute inset-0 px-5 sm:px-8 md:px-10">
-            <div className="relative h-full">
-              {/* the thread only ever exists on wall the curtain has already made */}
-              <span
-                aria-hidden
-                className="absolute left-0 top-0 bottom-0 w-[2px]"
-                style={{
-                  backgroundImage: STITCH_Y,
-                  clipPath: `inset(0 0 ${(1 - wipe) * 100}% 0)`,
-                }}
-              />
-              <div className="absolute inset-x-0 bottom-[26vh] md:landscape:bottom-[30vh] pl-[30px]">
-                <h2 id="about-heading" style={heroName}>
-                  Hi, I&rsquo;m Bayaraa.
-                </h2>
-                <p className="mt-4" style={heroLine}>
-                  I&rsquo;m a frontend developer who enjoys turning ideas into
-                  digital experiences.
-                </p>
-              </div>
-            </div>
+      {/* A — the opening, set low on the photograph */}
+      <div className="relative z-10 px-5 sm:px-8 md:px-10">
+        <div className="relative h-[100lvh] flex flex-col justify-end pb-[26vh] md:landscape:pb-[30vh]">
+          {/* the thread starts at the top of the frame and never breaks */}
+          <span
+            aria-hidden
+            className="absolute left-0 top-0 bottom-0 w-[2px]"
+            style={{ backgroundImage: STITCH_Y }}
+          />
+          <div className="pl-[30px]">
+            <h2 id="about-heading" style={heroName}>
+              Hi, I&rsquo;m Bayaraa.
+            </h2>
+            <p className="mt-4" style={heroLine}>
+              I&rsquo;m a frontend developer who enjoys turning ideas into
+              digital experiences.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* B — bare wall. Everything in normal flow, so no block can run out of room. */}
-      <div className="px-5 sm:px-8 md:px-10">
+      {/* B — the column. Everything in normal flow, so no block can run out of room. */}
+      <div className="relative z-10 px-5 sm:px-8 md:px-10">
         <div ref={colRef} className="relative">
           <span
             aria-hidden
@@ -290,12 +309,12 @@ export default function AboutMe() {
               <div ref={beat(0)} className="relative">
                 <Knot still={still} on={tied(0)} />
                 <p style={{ ...prose, maxWidth: "46ch" }}>
-                  I studied Information Systems, which is mostly the study of how
-                  information moves through an organisation: who enters it, who
-                  needs it, where it gets stuck. Frontend was the part of that I
-                  could hold in my hands. Same question, except now it is one
-                  person and one screen, and you can watch them get stuck in real
-                  time.
+                  I studied Information Systems, which is mostly the study of
+                  how information moves through an organisation: who enters it,
+                  who needs it, where it gets stuck. Frontend was the part of
+                  that I could hold in my hands. Same question, except now it is
+                  one person and one screen, and you can watch them get stuck in
+                  real time.
                 </p>
               </div>
             </div>
@@ -330,7 +349,9 @@ export default function AboutMe() {
             <div className="pt-[clamp(64px,10vh,132px)]">
               <div ref={beat(2)} className="relative">
                 <Knot still={still} on={tied(2)} />
-                <h3 style={heading}>Five of them, and who is on the other end</h3>
+                <h3 style={heading}>
+                  Five of them, and who is on the other end
+                </h3>
                 <p className="mt-3" style={{ ...prose, maxWidth: "52ch" }}>
                   You already scrolled past what they are. What that list leaves
                   out: <b style={name}>Yesh</b> is a student at eleven at night
@@ -339,15 +360,15 @@ export default function AboutMe() {
                   without either of them looking for a printer.{" "}
                   <b style={name}>GobiTravel</b> is somebody a long way off
                   deciding where in Mongolia to go.{" "}
-                  <b style={name}>Assessment Cortexa</b> is someone seeing what an
-                  assessment measured about them. And <b style={name}>AquaMotion</b>{" "}
-                  has nobody on the other end yet: it is still a concept, about
-                  analysing how someone swims.
+                  <b style={name}>Assessment Cortexa</b> is someone seeing what
+                  an assessment measured about them. And{" "}
+                  <b style={name}>AquaMotion</b> has nobody on the other end
+                  yet: it is still a concept, about analysing how someone swims.
                 </p>
                 <p className="mt-4" style={{ ...prose, maxWidth: "52ch" }}>
                   All five started the same way. Someone describes a thing that
-                  does not exist, and I decide what it looks like before there is
-                  anything to look at.
+                  does not exist, and I decide what it looks like before there
+                  is anything to look at.
                 </p>
               </div>
             </div>
@@ -363,8 +384,8 @@ export default function AboutMe() {
                     marginLeft: "clamp(24px, 5vw, 60px)",
                   }}
                 >
-                  Away from the editor it is books, and English that gets a little
-                  less effortful every year. Most of what I learn arrives
+                  Away from the editor it is books, and English that gets a
+                  little less effortful every year. Most of what I learn arrives
                   sideways: from a design I liked, a model that surprised me, or
                   something I built on a weekend that only ever had one user.
                 </p>
@@ -438,8 +459,9 @@ export default function AboutMe() {
                     maxWidth: "26ch",
                   }}
                 >
-                  I like taking something that exists only as an idea and turning
-                  it into something you can actually click, use, and experience.
+                  I like taking something that exists only as an idea and
+                  turning it into something you can actually click, use, and
+                  experience.
                 </p>
               </div>
             </div>
@@ -495,7 +517,10 @@ export default function AboutMe() {
                 >
                   Have an idea?
                 </h3>
-                <p className="mt-3" style={{ ...prose, color: INK, maxWidth: "44ch" }}>
+                <p
+                  className="mt-3"
+                  style={{ ...prose, color: INK, maxWidth: "44ch" }}
+                >
                   I am always interested in interesting products, creative
                   experiments, and things worth building. Tell me what it is
                   supposed to feel like, not only what it is supposed to do.
@@ -523,7 +548,7 @@ export default function AboutMe() {
             </div>
           </div>
 
-          {/* the thread stops above the floor: #9C3025 on #DB8443 is 2.58:1 */}
+          {/* the thread ends on a knot, clear of the floor in the photograph */}
           <span
             aria-hidden
             className="absolute left-[-3px] bottom-[6px] w-2 h-2 rounded-full"
@@ -536,22 +561,6 @@ export default function AboutMe() {
             }}
           />
         </div>
-      </div>
-
-      {/* C — the page ends back in the room: the last 251 rows of the same
-          photograph (wall base, baseboard, floorboards). Width-fitted at every
-          viewport, so object-bottom always lands on source y 690-941. No text
-          sits here, so the band carries no contrast requirement. */}
-      <div className="relative w-full aspect-[1672/251]">
-        <Image
-          src="/woolen-model-bg.png"
-          alt=""
-          aria-hidden
-          fill
-          sizes="100vw"
-          quality={70}
-          className="object-cover object-bottom"
-        />
       </div>
     </section>
   );

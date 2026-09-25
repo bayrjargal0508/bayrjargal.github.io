@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
+
+import { useScrubVideo } from "./use-scrub-video";
 
 // Custom hook for typewriter effect
 function useTypewriter(text: string, speed = 38, startDelay = 600) {
@@ -36,11 +38,22 @@ function useTypewriter(text: string, speed = 38, startDelay = 600) {
 }
 
 export default function App() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const prevXRef = useRef<number | null>(null);
-  const targetTimeRef = useRef<number>(0);
-  const isSeekingRef = useRef<boolean>(false);
-  const seekPendingRef = useRef<boolean>(false);
+  // the hero is fixed, so nothing unmounts it: past the first screen it is
+  // covered by the sections above it and has no reason to keep seeking
+  const [heroOnScreen, setHeroOnScreen] = useState(true);
+
+  useEffect(() => {
+    const update = () => setHeroOnScreen(window.scrollY < window.innerHeight);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  const { videoRef, onLoadedMetadata, onSeeked } = useScrubVideo(heroOnScreen);
 
   const [showPills, setShowPills] = useState(false);
 
@@ -55,122 +68,6 @@ export default function App() {
       setShowPills(true);
     }, 400);
     return () => clearTimeout(timer);
-  }, []);
-
-  // Seek logic preventing seek-flooding
-  const performSeek = () => {
-    const video = videoRef.current;
-    if (!video || !video.duration || Number.isNaN(video.duration)) return;
-
-    if (isSeekingRef.current) {
-      seekPendingRef.current = true;
-      return;
-    }
-
-    if (Math.abs(video.currentTime - targetTimeRef.current) > 0.01) {
-      isSeekingRef.current = true;
-      video.currentTime = targetTimeRef.current;
-    }
-  };
-
-  const handleSeeked = () => {
-    isSeekingRef.current = false;
-    const video = videoRef.current;
-    if (!video || !video.duration) return;
-
-    if (
-      seekPendingRef.current ||
-      Math.abs(video.currentTime - targetTimeRef.current) > 0.02
-    ) {
-      seekPendingRef.current = false;
-      performSeek();
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      targetTimeRef.current = videoRef.current.currentTime || 0;
-    }
-  };
-
-  // Mouse scrub handler
-  useEffect(() => {
-    const SENSITIVITY = 0.8;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const video = videoRef.current;
-      if (!video || !video.duration || Number.isNaN(video.duration)) {
-        prevXRef.current = e.clientX;
-        return;
-      }
-
-      if (prevXRef.current === null) {
-        prevXRef.current = e.clientX;
-        return;
-      }
-
-      const delta = e.clientX - prevXRef.current;
-      prevXRef.current = e.clientX;
-
-      const timeOffset =
-        (delta / window.innerWidth) * SENSITIVITY * video.duration;
-      const newTime = Math.max(
-        0,
-        Math.min(video.duration, targetTimeRef.current + timeOffset),
-      );
-      targetTimeRef.current = newTime;
-
-      performSeek();
-    };
-
-    const handleMouseLeave = () => {
-      prevXRef.current = null;
-    };
-
-    // Also support touch scrubbing for mobile devices
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 0) return;
-      const clientX = e.touches[0].clientX;
-      const video = videoRef.current;
-      if (!video || !video.duration || Number.isNaN(video.duration)) {
-        prevXRef.current = clientX;
-        return;
-      }
-
-      if (prevXRef.current === null) {
-        prevXRef.current = clientX;
-        return;
-      }
-
-      const delta = clientX - prevXRef.current;
-      prevXRef.current = clientX;
-
-      const timeOffset =
-        (delta / window.innerWidth) * SENSITIVITY * video.duration;
-      const newTime = Math.max(
-        0,
-        Math.min(video.duration, targetTimeRef.current + timeOffset),
-      );
-      targetTimeRef.current = newTime;
-
-      performSeek();
-    };
-
-    const handleTouchEnd = () => {
-      prevXRef.current = null;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseleave", handleMouseLeave);
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-    };
   }, []);
 
   const actionPills = [
@@ -188,8 +85,8 @@ export default function App() {
         muted
         playsInline
         preload="auto"
-        onLoadedMetadata={handleLoadedMetadata}
-        onSeeked={handleSeeked}
+        onLoadedMetadata={onLoadedMetadata}
+        onSeeked={onSeeked}
         className="fixed inset-0 z-0 w-full h-full object-cover object-[27%_center] md:object-[70%_center] pointer-events-none select-none"
       />
 

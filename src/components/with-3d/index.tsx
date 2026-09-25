@@ -40,17 +40,17 @@ const tabs: { id: string; label: string; blurb: string; items: Project[] }[] = [
       },
     ],
   },
-  {
-    id: "personal",
-    label: "Personal",
-    blurb: "Ideas I build because I'm curious.",
-    items: [
-      { name: "Assessment Cortexa" },
-      { name: "Quiz Platform" },
-      { name: "Wedding Invitation" },
-      { name: "AquaMotion" },
-    ],
-  },
+  // {
+  //   id: "personal",
+  //   label: "Personal",
+  //   blurb: "Ideas I build because I'm curious.",
+  //   items: [
+  //     { name: "Assessment Cortexa" },
+  //     { name: "Quiz Platform" },
+  //     { name: "Wedding Invitation" },
+  //     { name: "AquaMotion" },
+  //   ],
+  // },
 ];
 
 const SLIDE = 0.5;
