@@ -11,11 +11,10 @@ function useTypewriter(text: string, speed = 38, startDelay = 600) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    let timeoutId: number;
     let intervalId: number;
     let currentIndex = 0;
 
-    timeoutId = window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       intervalId = window.setInterval(() => {
         if (currentIndex < text.length) {
           currentIndex++;
@@ -55,6 +54,7 @@ export default function App() {
 
   const { videoRef, onLoadedMetadata, onSeeked } = useScrubVideo(heroOnScreen);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- read by the commented-out pill block below
   const [showPills, setShowPills] = useState(false);
 
   // Typewriter hook for hero message
@@ -70,6 +70,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- read by the commented-out pill block below
   const actionPills = [
     "See what I build",
     "Start a project",
