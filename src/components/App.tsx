@@ -82,7 +82,7 @@ export default function App() {
     <div className="fixed inset-0 w-full h-screen bg-black text-white selection:bg-white selection:text-black">
       <video
         ref={videoRef}
-        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/media/3d-model-video.mp4`}
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/3d-model-video.mp4`}
         muted
         playsInline
         preload="auto"
