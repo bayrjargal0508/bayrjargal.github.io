@@ -82,7 +82,7 @@ export default function App() {
     <div className="fixed inset-0 w-full h-screen bg-black text-white selection:bg-white selection:text-black">
       <video
         ref={videoRef}
-        src="/media/3d-model-video.mp4"
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/media/3d-model-video.mp4`}
         muted
         playsInline
         preload="auto"
@@ -173,7 +173,7 @@ export default function App() {
             className="mt-8 flex flex-col w-full items-center justify-center"
           >
             <Image
-              src="/mouse.svg"
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH}/mouse.svg`}
               alt=""
               width={48}
               height={48}

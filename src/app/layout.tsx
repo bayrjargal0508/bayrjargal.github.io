@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: "Portfolio | BJ",
   description: "Showcasing my work and skills as a developer.",
   icons: {
-    icon: "/woolen-model.png",
+    icon: `${process.env.NEXT_PUBLIC_BASE_PATH}/woolen-model.png`,
   },
 };
 

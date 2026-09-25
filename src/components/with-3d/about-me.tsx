@@ -239,8 +239,8 @@ export default function AboutMe() {
             the poster, so the frame is never black while the video loads. */}
         <video
           ref={videoRef}
-          src="/media/woolen-girl.mp4"
-          poster="/woolen-model-bg.png"
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH}/media/woolen-girl.mp4`}
+          poster={`${process.env.NEXT_PUBLIC_BASE_PATH}/woolen-model-bg.png`}
           muted
           playsInline
           preload={near ? "auto" : "metadata"}

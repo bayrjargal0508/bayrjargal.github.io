@@ -19,7 +19,7 @@ export default function BodyDetails() {
         </div>
         <div>
           <Image
-            src="/image1.jpg"
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH}/image1.jpg`}
             width={300}
             height={500}
             alt="Picture of the author"

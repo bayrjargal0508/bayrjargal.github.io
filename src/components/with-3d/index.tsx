@@ -108,7 +108,7 @@ export default function WhatIBuild() {
           }}
         >
           <Image
-            src="/woolen-computer.png"
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH}/woolen-computer.png`}
             alt=""
             fill
             sizes="100vw"
